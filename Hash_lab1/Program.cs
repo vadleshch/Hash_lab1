@@ -29,12 +29,18 @@ string concat(string input, int i)
 string RandomChange(ref string input)
 {
     char[] chars = input.ToCharArray();
-    chars[r.Next(0, input.Length)] = (char)r.Next(1, 256);
+    char randomChar = (char)r.Next(32, 256);
+    int ri = r.Next(0, input.Length);
+    while (randomChar == input[ri])
+    { 
+        randomChar = (char)r.Next(32, 256);
+    }
+    chars[ri] = randomChar;
     input = new string(chars);
     return input;
 }
 
-(string, int) PrRandomChange(string input, string hash)
+(string, int) PrRandomChange(string input, string hash, bool printf30 = false)
 {
     string vstr = input;
     string newHash;
@@ -44,13 +50,17 @@ string RandomChange(ref string input)
         counter++;
         RandomChange(ref vstr);
         newHash = ComputeRipemd160(vstr);
+        if (printf30 && counter < 31)
+        {
+            Console.WriteLine($"{counter}: {vstr} {newHash}");
+        }
     }
     while (!CompareHashes(newHash, hash, 4));
     return (vstr, counter);
 }
 
 
-int PrCountChange(string input, string hash)
+int PrCountChange(string input, string hash, bool printf30 = false)
 {
     string vstr;
     string newHash;
@@ -60,12 +70,16 @@ int PrCountChange(string input, string hash)
         counter++;
         vstr = concat(input, counter);
         newHash = ComputeRipemd160(vstr);
+        if (printf30 && counter < 31)
+        {
+            Console.WriteLine($"{vstr} {newHash}");
+        }
     }
     while (!CompareHashes(newHash, hash, 4));
     return counter;
 }
 
-Console.WriteLine($"Змінений вхід: {str + PrCountChange(str, hash)}");
+Console.WriteLine($"Змінений вхід: {str + PrCountChange(str, hash, true)}");
 Console.WriteLine($"Геш-значення: {ComputeRipemd160(str + PrCountChange(str, hash))}");
 Console.WriteLine($"");
 
@@ -86,14 +100,14 @@ bool CompareHashes(string hash1, string hash2, int length)
 
 string vstr;
 int counter;
-(vstr, counter) = PrRandomChange(str, hash);
+(vstr, counter) = PrRandomChange(str, hash, true);
 
 Console.WriteLine($"Змінений вхід: {vstr}");
 Console.WriteLine($"Геш-значення: {ComputeRipemd160(vstr)}");
 Console.WriteLine($"Кількість ітерацій: {counter}");
 Console.WriteLine($"");
 
-(int, int) PrCountCollision(string input)
+(int, int) PrCountCollision(string input, bool printf30 = false)
 {
     Dictionary<string, int> seen = new Dictionary<string, int>(); 
     int counter = 0;
@@ -108,19 +122,23 @@ Console.WriteLine($"");
             return (collisionNumber, counter);
         } 
         seen[suffix] = counter;
+        if (printf30 && counter < 31)
+        {
+            Console.WriteLine($"{concat(input, counter)} {newHash}");
+        }
     }
 }
 
 int collisionNumber;
 
-(collisionNumber, counter) = PrCountCollision(str);
+(collisionNumber, counter) = PrCountCollision(str, true);
 
 Console.WriteLine($"колізія:");
 Console.WriteLine($"{str + counter} {ComputeRipemd160(str + counter)}");
 Console.WriteLine($"{str + collisionNumber} {ComputeRipemd160(str + collisionNumber)}");
 Console.WriteLine($"");
 
-(int, string, string) PrRandomCollision(string input)
+(int, string, string) PrRandomCollision(string input, bool printf30 = false)
 {
     int counter = 0;
     string vstr = input;
@@ -128,6 +146,7 @@ Console.WriteLine($"");
     string newHash = ComputeRipemd160(vstr);
     seen[newHash[^8..]] = vstr; 
     string vstr2, suffix;
+    int id;
     while (true)
     {
         counter++;
@@ -143,22 +162,39 @@ Console.WriteLine($"");
             continue;
         }
         seen[suffix] = vstr;
+        if (printf30 && counter < 31)
+        {
+            Console.WriteLine($"{counter}: {vstr} {newHash}");
+        }
     }
     return (counter, vstr, vstr2!);
 }
 
 string vstr2;
-(counter, vstr, vstr2) = PrRandomCollision(str);
-Console.WriteLine($"колізія після {counter} кроків:");
+(counter, vstr, vstr2) = PrRandomCollision(str, true);
+Console.WriteLine($"колізія після {counter} кроків із елементом згенерованим на кроці:");
 Console.WriteLine($"{vstr2} - {ComputeRipemd160(vstr2)}");
 Console.WriteLine($"{vstr} - {ComputeRipemd160(vstr)}");
 
 string temp = str;
 int iteations = 100;
 
+string RandomSuf(string input)
+{
+    char[] chars = input.ToCharArray();
+    char[] suffix = new char[5];
+    for (int i = 0; i < 5; i++)
+    { 
+        suffix[i] = (char)r.Next(32, 256);
+    }
+    input = new string(chars) + new string(suffix);
+    return input;
+}
+
 for (int i = 0; i < iteations; i++)
 {
-    temp = RandomChange(ref temp);
+    temp = RandomSuf(str);
+    hash = ComputeRipemd160(temp);
     Console.WriteLine($"{PrCountChange(temp, hash)}");
 }
 
@@ -166,7 +202,8 @@ Console.WriteLine($"");
 
 for (int i = 0; i < iteations; i++)
 {
-    temp = RandomChange(ref temp);
+    temp = RandomSuf(str);
+    hash = ComputeRipemd160(temp);
     (vstr, counter) = PrRandomChange(temp, hash);
     Console.WriteLine($"{counter}");
 }
@@ -175,7 +212,8 @@ Console.WriteLine($"");
 
 for (int i = 0; i < iteations; i++)
 {
-    temp = RandomChange(ref temp);
+    temp = RandomSuf(str);
+    hash = ComputeRipemd160(temp);
     (collisionNumber, counter) = PrCountCollision(temp);
     Console.WriteLine($"{counter}");
 }
@@ -184,7 +222,8 @@ Console.WriteLine($"");
 
 for (int i = 0; i < iteations; i++)
 {
-    temp = RandomChange(ref temp);
+    temp = RandomSuf(str);
+    hash = ComputeRipemd160(temp);
     (counter, vstr, vstr2) = PrRandomCollision(temp);
     Console.WriteLine($"{counter}");
 }
